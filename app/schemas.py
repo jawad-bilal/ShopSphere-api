@@ -34,6 +34,55 @@ class ProductOut(BaseModel):
     price: float
     image: str
     category: str
+    stock: int
+    average_rating: float = 0.0
+    review_count: int = 0
+
+    model_config = {"from_attributes": True}
+
+
+class ReviewCreate(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    comment: str = Field(min_length=3, max_length=1000)
+
+
+class ReviewAuthorOut(BaseModel):
+    id: int
+    name: str
+
+    model_config = {"from_attributes": True}
+
+
+class ReviewOut(BaseModel):
+    id: int
+    rating: int
+    comment: str
+    created_at: datetime
+    updated_at: datetime
+    user: ReviewAuthorOut
+
+    model_config = {"from_attributes": True}
+
+
+class ReviewSummaryOut(BaseModel):
+    average_rating: float
+    review_count: int
+
+
+class ProductReviewsOut(BaseModel):
+    summary: ReviewSummaryOut
+    reviews: list[ReviewOut]
+    user_review: ReviewOut | None = None
+
+
+class WishlistToggle(BaseModel):
+    product_id: int
+
+
+class WishlistItemOut(BaseModel):
+    id: int
+    created_at: datetime
+    product: ProductOut
 
     model_config = {"from_attributes": True}
 

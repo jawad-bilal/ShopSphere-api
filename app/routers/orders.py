@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from ..auth import get_current_user
 from ..database import get_db
-from ..models import Order, OrderItem, User
+from ..models import Order, OrderItem, Product, User
 from ..schemas import OrderCreate, OrderOut
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -18,13 +18,37 @@ def create_order(
     if not payload.items:
         raise HTTPException(status_code=400, detail="Order must include at least one item")
 
-    # Mock payment validation — accept any non-empty card-ish number
     if payload.payment_method == "card":
         digits = "".join(ch for ch in (payload.card_number or "") if ch.isdigit())
         if len(digits) < 12:
             raise HTTPException(status_code=400, detail="Invalid card number")
 
-    total = round(sum(item.price * item.quantity for item in payload.items), 2)
+    product_ids = [item.product_id for item in payload.items]
+    products = {
+        product.id: product
+        for product in db.query(Product)
+        .filter(Product.id.in_(product_ids))
+        .with_for_update()
+        .all()
+    }
+
+    for item in payload.items:
+        product = products.get(item.product_id)
+        if not product:
+            raise HTTPException(status_code=400, detail=f"Product not found: {item.name}")
+        if product.stock < item.quantity:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Only {product.stock} left in stock for {product.name}",
+            )
+
+    total = round(
+        sum(
+            products[item.product_id].price * item.quantity
+            for item in payload.items
+        ),
+        2,
+    )
 
     order = Order(
         user_id=current_user.id,
@@ -40,14 +64,16 @@ def create_order(
     db.flush()
 
     for item in payload.items:
+        product = products[item.product_id]
+        product.stock -= item.quantity
         db.add(
             OrderItem(
                 order_id=order.id,
-                product_id=item.product_id,
-                name=item.name,
-                price=item.price,
+                product_id=product.id,
+                name=product.name,
+                price=product.price,
                 quantity=item.quantity,
-                image=item.image,
+                image=product.image,
             )
         )
 

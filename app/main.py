@@ -3,11 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .database import Base, SessionLocal, engine
-from .routers import auth, orders, products
+from .routers import auth, orders, products, reviews, wishlist
+from .schema_migrations import ensure_schema
 from .seed import seed_products
 
 settings = get_settings()
 
+ensure_schema(engine)
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title=settings.app_name, version="1.0.0")
@@ -22,7 +24,9 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(products.router)
+app.include_router(reviews.router)
 app.include_router(orders.router)
+app.include_router(wishlist.router)
 
 
 @app.on_event("startup")
