@@ -1,6 +1,8 @@
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field
 
+from .constants import ROLE_CUSTOMER
+
 
 class UserCreate(BaseModel):
     name: str = Field(min_length=2, max_length=100)
@@ -13,10 +15,17 @@ class UserLogin(BaseModel):
     password: str
 
 
+class UserUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=100)
+    email: EmailStr | None = None
+
+
 class UserOut(BaseModel):
     id: int
     name: str
     email: EmailStr
+    role: str = ROLE_CUSTOMER
+    created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
@@ -25,6 +34,26 @@ class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserOut
+
+
+class ChangePasswordIn(BaseModel):
+    current_password: str = Field(min_length=1, max_length=100)
+    new_password: str = Field(min_length=6, max_length=100)
+    confirm_password: str = Field(min_length=6, max_length=100)
+
+
+class ForgotPasswordIn(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordIn(BaseModel):
+    token: str = Field(min_length=16, max_length=255)
+    new_password: str = Field(min_length=6, max_length=100)
+    confirm_password: str = Field(min_length=6, max_length=100)
+
+
+class MessageOut(BaseModel):
+    message: str
 
 
 class ProductOut(BaseModel):

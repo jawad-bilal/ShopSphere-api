@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session, joinedload
 
 from ..auth import get_current_user, get_optional_user
 from ..database import get_db
-from ..models import Product, Review, User
+from ..models import Review, User
+from ..product_query import get_active_product
 from ..schemas import ProductReviewsOut, ReviewCreate, ReviewOut, ReviewSummaryOut
 
 router = APIRouter(prefix="/products", tags=["reviews"])
@@ -32,7 +33,7 @@ def list_product_reviews(
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_optional_user),
 ):
-    product = db.query(Product).filter(Product.id == product_id).first()
+    product = get_active_product(db, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -64,7 +65,7 @@ def upsert_review(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    product = db.query(Product).filter(Product.id == product_id).first()
+    product = get_active_product(db, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
