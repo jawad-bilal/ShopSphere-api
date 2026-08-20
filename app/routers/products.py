@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import Product, Review
 from ..product_helpers import product_to_out
+from ..product_query import active_products_query, get_active_product
 from ..schemas import ProductOut
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -24,7 +25,7 @@ def list_products(
     sort: str = Query(default="default"),
     db: Session = Depends(get_db),
 ):
-    query = db.query(Product)
+    query = active_products_query(db)
 
     if category and category.lower() != "all":
         query = query.filter(Product.category.ilike(category))
@@ -57,7 +58,13 @@ def list_products(
 
 @router.get("/categories", response_model=list[str])
 def list_categories(db: Session = Depends(get_db)):
-    rows = db.query(Product.category).distinct().order_by(Product.category.asc()).all()
+    rows = (
+        active_products_query(db)
+        .with_entities(Product.category)
+        .distinct()
+        .order_by(Product.category.asc())
+        .all()
+    )
     return [row[0] for row in rows]
 
 
@@ -67,12 +74,12 @@ def related_products(
     limit: int = Query(default=4, ge=1, le=12),
     db: Session = Depends(get_db),
 ):
-    product = db.query(Product).filter(Product.id == product_id).first()
+    product = get_active_product(db, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
     related = (
-        db.query(Product)
+        active_products_query(db)
         .filter(Product.category == product.category, Product.id != product_id)
         .order_by(Product.id.asc())
         .limit(limit)
@@ -83,7 +90,7 @@ def related_products(
 
 @router.get("/{product_id}", response_model=ProductOut)
 def get_product(product_id: int, db: Session = Depends(get_db)):
-    product = db.query(Product).filter(Product.id == product_id).first()
+    product = get_active_product(db, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return product_to_out(db, product)

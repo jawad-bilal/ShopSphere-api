@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .database import Base, SessionLocal, engine
-from .routers import auth, orders, products, reviews, wishlist
+from .routers import admin, auth, orders, products, reviews, wishlist
 from .schema_migrations import ensure_schema
 from .seed import seed_products
 
@@ -27,6 +27,7 @@ app.include_router(products.router)
 app.include_router(reviews.router)
 app.include_router(orders.router)
 app.include_router(wishlist.router)
+app.include_router(admin.router)
 
 
 @app.on_event("startup")

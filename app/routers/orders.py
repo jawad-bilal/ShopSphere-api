@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from ..auth import get_current_user
 from ..database import get_db
 from ..models import Order, OrderItem, Product, User
 from ..schemas import OrderCreate, OrderOut
+from ..services.email import send_order_confirmation_email
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -36,6 +37,11 @@ def create_order(
         product = products.get(item.product_id)
         if not product:
             raise HTTPException(status_code=400, detail=f"Product not found: {item.name}")
+        if not product.is_active:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{product.name} is no longer available",
+            )
         if product.stock < item.quantity:
             raise HTTPException(
                 status_code=400,
@@ -78,7 +84,13 @@ def create_order(
         )
 
     db.commit()
-    db.refresh(order)
+    order = (
+        db.query(Order)
+        .options(joinedload(Order.items))
+        .filter(Order.id == order.id)
+        .first()
+    )
+    send_order_confirmation_email(current_user, order)
     return order
 
 

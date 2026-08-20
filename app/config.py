@@ -31,6 +31,14 @@ class Settings:
                 "http://localhost:5173,http://127.0.0.1:5173",
             )
         )
+        self.frontend_url = os.getenv(
+            "FRONTEND_URL", "https://shop-sphereone.vercel.app"
+        ).rstrip("/")
+        self.resend_api_key = os.getenv("RESEND_API_KEY", "")
+        self.resend_from_email = os.getenv(
+            "RESEND_FROM_EMAIL", "ShopSphere <onboarding@resend.dev>"
+        )
+        self.low_stock_threshold = int(os.getenv("LOW_STOCK_THRESHOLD", "5"))
         # Optional: Cloudflare R2 object storage (NOT a database)
         self.r2_account_id = os.getenv("R2_ACCOUNT_ID", "")
         self.r2_access_key_id = os.getenv("R2_ACCESS_KEY_ID", "")

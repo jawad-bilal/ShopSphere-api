@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session, joinedload
 
 from ..auth import get_current_user
 from ..database import get_db
-from ..models import Product, User, WishlistItem
+from ..models import User, WishlistItem
+from ..product_query import get_active_product
 from ..schemas import WishlistItemOut, WishlistToggle
 
 router = APIRouter(prefix="/wishlist", tags=["wishlist"])
@@ -29,7 +30,7 @@ def add_to_wishlist(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    product = db.query(Product).filter(Product.id == payload.product_id).first()
+    product = get_active_product(db, payload.product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
